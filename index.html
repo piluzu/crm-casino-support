@@ -403,7 +403,6 @@
     <input type="text" id="contacts-search" placeholder="Search by name, email, or company..." oninput="renderContacts()">
     <span class="chip" id="chip-total">310 contacts (full snapshot)</span>
     <span class="chip">Updated: Jul 27, 2026</span>
-    <span class="chip" style="cursor:pointer;color:var(--red);border-color:#f2c6c6;" onclick="resetContactsData()">↺ Reset snapshot</span>
   </div>
 
   <div style="padding:18px 32px 40px 32px;">
@@ -4167,7 +4166,6 @@ function handleImportFile(event){
       });
 
       renderContacts();
-      saveContactsData();
 
       alert(
         `Import complete.\n` +
@@ -4397,7 +4395,6 @@ function createContact(addAnother){
   });
 
   renderContacts();
-  saveContactsData();
 
   if(addAnother){
     openContactPanel();
@@ -4453,7 +4450,6 @@ function saveContactDetail(){
   setTimeout(()=>{ msg.style.display = "none"; }, 2000);
 
   renderContacts();
-  saveContactsData();
 }
 
 function addContactNote(){
@@ -4468,7 +4464,6 @@ function addContactNote(){
 
   textarea.value = "";
   renderContactNotes();
-  saveContactsData();
 }
 
 function renderContactNotes(){
@@ -4505,7 +4500,6 @@ function deleteContactNote(noteIdx){
   if(!confirm("Delete this note? This cannot be undone.")) return;
   c.notes.splice(noteIdx, 1);
   renderContactNotes();
-  saveContactsData();
 }
 
 let targetStatus = "New";
@@ -4595,52 +4589,8 @@ function createTicket(){
   closePanel();
 }
 
-// --- Contacts persistence (window.storage) ---
-// Everything related to contacts (edited data, new contacts, notes) is saved
-// in the artifact's storage, tied to your user (not visible to other people).
-
-async function saveContactsData(){
-  try{
-    const result = await window.storage.set("contacts-data", JSON.stringify(contactsData), false);
-    if(!result){
-      console.error("Could not save contact data.");
-    }
-  }catch(err){
-    console.error("Error guardando contactos en storage:", err);
-  }
-}
-
-async function loadContactsFromStorage(){
-  try{
-    const result = await window.storage.get("contacts-data", false);
-    if(result && result.value){
-      const loaded = JSON.parse(result.value);
-      if(Array.isArray(loaded) && loaded.length > 0){
-        contactsData.length = 0;
-        loaded.forEach(c => contactsData.push(c));
-      }
-    }
-  }catch(err){
-    // No saved data yet: falling back to the original HubSpot snapshot.
-    console.log("No saved data yet, using the original snapshot.");
-  } finally {
-    const contactsView = document.getElementById("view-contacts");
-    if(contactsView && contactsView.style.display !== "none"){
-      renderContacts();
-    }
-  }
-}
-
-async function resetContactsData(){
-  if(!confirm("This will erase all changes, new contacts, and notes you added, and revert to the original HubSpot snapshot. Continue?")) return;
-  contactsData.length = 0;
-  JSON.parse(JSON.stringify(originalContactsSnapshot)).forEach(c => contactsData.push(c));
-  await saveContactsData();
-  renderContacts();
-}
-
-loadContactsFromStorage();
-
+// Note: contacts are persisted directly to Supabase (see the create/save/delete
+// functions further below), so no local browser storage layer is needed here.
 
 
 // ============================================================
