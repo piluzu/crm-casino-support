@@ -178,7 +178,7 @@
   .col-filter-btn:hover{background:#e5eaf0;}
   .col-filter-btn.active{color:var(--orange);font-weight:900;}
   .col-filter-panel{
-    display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:20;
+    display:none;position:fixed;z-index:1000;
     background:#fff;border:1px solid var(--border);border-radius:6px;
     box-shadow:0 6px 18px rgba(33,51,67,.18);min-width:220px;max-width:280px;
     padding:10px;text-transform:none;font-weight:400;
@@ -1654,6 +1654,21 @@ const TICKET_COLUMNS = [
 const ticketColumnFilters = {}; // key -> Set of allowed display values, or absent = no filter
 let ticketsListHeaderBuilt = false;
 
+function positionFilterPanel(panel, button){
+  const rect = button.getBoundingClientRect();
+  panel.style.top = (rect.bottom + 4) + "px";
+  panel.style.left = rect.left + "px";
+  requestAnimationFrame(()=>{
+    const panelRect = panel.getBoundingClientRect();
+    if(panelRect.right > window.innerWidth - 8){
+      panel.style.left = Math.max(8, window.innerWidth - panelRect.width - 8) + "px";
+    }
+    if(panelRect.bottom > window.innerHeight - 8){
+      panel.style.top = Math.max(8, rect.top - panelRect.height - 4) + "px";
+    }
+  });
+}
+
 function ticketDisplayValue(val){
   return (val === undefined || val === null || val === "") ? "(Blanks)" : val;
 }
@@ -1736,6 +1751,7 @@ function toggleColumnFilter(key, event){
   }).join("");
 
   panel.classList.add("open");
+  positionFilterPanel(panel, event.currentTarget);
 }
 
 // "Contains" live search: narrows the visible checkbox list without changing selections
@@ -2872,6 +2888,7 @@ function toggleCompanyColumnFilter(key, event){
   }).join("");
 
   panel.classList.add("open");
+  positionFilterPanel(panel, event.currentTarget);
 }
 
 // "Contains" live search: narrows the visible checkbox list without changing selections
@@ -3068,6 +3085,7 @@ function toggleOwnerColumnFilter(key, event){
   }).join("");
 
   panel.classList.add("open");
+  positionFilterPanel(panel, event.currentTarget);
 }
 
 function filterOwnerColumnList(key){
@@ -3822,6 +3840,7 @@ function toggleContactColumnFilter(key, event){
   }).join("");
 
   panel.classList.add("open");
+  positionFilterPanel(panel, event.currentTarget);
 }
 
 // "Contains" live search: narrows the visible checkbox list without changing selections
