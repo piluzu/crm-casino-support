@@ -4059,6 +4059,13 @@ async function handleImportTicketFile(event){
       let imported = 0;
       let skipped = 0;
       let failed = 0;
+      let duplicates = 0;
+
+      const existingDescriptions = new Set(
+        ticketsListData
+          .map(t => (t.description || "").trim().toLowerCase())
+          .filter(d => d.length > 0)
+      );
 
       for (const row of rows) {
         const name = pickField(row, ["ticket name", "name", "subject"]);
@@ -4074,6 +4081,12 @@ async function handleImportTicketFile(event){
 
         if(!name){
           skipped++;
+          continue;
+        }
+
+        const descKey = (description || "").trim().toLowerCase();
+        if (descKey.length > 0 && existingDescriptions.has(descKey)) {
+          duplicates++;
           continue;
         }
 
@@ -4096,6 +4109,7 @@ async function handleImportTicketFile(event){
             owner, lastActivity: lastActivity || created, closeDate: closeDate || "",
             description: description || "", notes: [], _dbId: data.id
           });
+          if (descKey.length > 0) existingDescriptions.add(descKey);
           imported++;
         } catch (e) {
           console.error(e);
@@ -4108,6 +4122,7 @@ async function handleImportTicketFile(event){
       alert(
         `Import complete.\n` +
         `Tickets imported and saved: ${imported}\n` +
+        `Duplicates skipped (same description already exists): ${duplicates}\n` +
         `Rows skipped (missing Ticket Name): ${skipped}\n` +
         `Rows failed to save: ${failed}\n\n` +
         `Recognized columns: Ticket Name, Company/Group Name, Casino Name, Ticket Status, Create Date, Priority, Ticket Owner, Last Activity Date, Close Date, Description.`
@@ -4120,7 +4135,6 @@ async function handleImportTicketFile(event){
 
   event.target.value = "";
 }
-
 // --- Import contacts from CSV ---
 function triggerImportFile(){
   closeAddContactsMenu();
