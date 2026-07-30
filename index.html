@@ -4041,7 +4041,7 @@ function triggerImportTicketFile(){
   document.getElementById("import-ticket-file-input").click();
 }
 
-function handleImportTicketFile(event){
+async function handleImportTicketFile(event){
   const file = event.target.files[0];
   if(!file) return;
 
@@ -4054,41 +4054,63 @@ function handleImportTicketFile(event){
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
-    complete: function(results){
+    complete: async function(results){
       const rows = results.data || [];
       let imported = 0;
       let skipped = 0;
+      let failed = 0;
 
-      rows.forEach(row => {
+      for (const row of rows) {
         const name = pickField(row, ["ticket name", "name", "subject"]);
         const group = pickField(row, ["company/group name", "group name", "group"]);
         const casino = pickField(row, ["casino name", "casino"]);
-        const status = pickField(row, ["ticket status", "status"]);
+        const status = pickField(row, ["ticket status", "status"]) || "New";
         const created = pickField(row, ["create date", "created"]);
         const priority = pickField(row, ["priority"]);
         const owner = pickField(row, ["ticket owner", "owner"]);
         const lastActivity = pickField(row, ["last activity date", "lastactivity"]);
         const closeDate = pickField(row, ["close date", "closedate"]);
+        const description = pickField(row, ["description", "ticket description"]);
 
         if(!name){
           skipped++;
-          return;
+          continue;
         }
 
-        ticketsListData.unshift({
-          name, group, casino, status: status || "New", created, priority,
-          owner, lastActivity, closeDate, description: "", notes: []
-        });
-        imported++;
-      });
+        try {
+          const { data, error } = await sb.from("tickets").insert({
+            ticket_name: name, group_name: group, casino_name: casino, status,
+            created_date: created, priority, owner,
+            last_activity_date: lastActivity || created,
+            close_date: closeDate || "", description: description || ""
+          }).select().single();
+
+          if (error) {
+            console.error(error);
+            failed++;
+            continue;
+          }
+
+          ticketsListData.unshift({
+            name, group, casino, status, created, priority,
+            owner, lastActivity: lastActivity || created, closeDate: closeDate || "",
+            description: description || "", notes: [], _dbId: data.id
+          });
+          imported++;
+        } catch (e) {
+          console.error(e);
+          failed++;
+        }
+      }
 
       renderTicketsList();
 
       alert(
         `Import complete.\n` +
-        `Tickets imported: ${imported}\n` +
-        `Rows skipped (missing Ticket Name): ${skipped}\n\n` +
-        `Recognized columns: Ticket Name, Company/Group Name, Casino Name, Ticket Status, Create Date, Priority, Ticket Owner, Last Activity Date, Close Date.`
+        `Tickets imported and saved: ${imported}\n` +
+        `Rows skipped (missing Ticket Name): ${skipped}\n` +
+        `Rows failed to save: ${failed}\n\n` +
+        `Recognized columns: Ticket Name, Company/Group Name, Casino Name, Ticket Status, Create Date, Priority, Ticket Owner, Last Activity Date, Close Date, Description.`
       );
     },
     error: function(err){
